@@ -31,7 +31,7 @@ class UpdaterService < ServiceObject
             "windows" => "/.*/"
           }
         },
-        "updater-upgrade" => {
+        "updater-crowbar-upgrade" => {
           "unique" => false,
           "count" => -1,
           "admin" => false,
@@ -72,27 +72,15 @@ class UpdaterService < ServiceObject
           @logger.debug("Updater apply_role_post_chef_call: delete [:updater][:one_shot_run] for #{node.name} (#{node[:updater].inspect}")
           node.save
         end
-        if node.role? "updater-upgrade"
-        node[:updater][:upgrade_one_shot_run] = false
-        @logger.debug("Updater apply_role_post_chef_call: delete [:updater][:upgrade_one_shot_run] for #{node.name} (#{node[:updater].inspect}")
-        node.save
+        if node.role? "updater-crowbar-upgrade"
+          node[:updater][:upgrade_one_shot_run] = false
+          @logger.debug("Updater apply_role_post_chef_call: delete [:updater][:upgrade_one_shot_run] for #{node.name} (#{node[:updater].inspect}")
+
+          # By modifying the runlist we ensure that only upgrade related recipes are executed
+          node.run_list.run_list_items.clear
+          node.run_list.run_list_items << "role[updater-crowbar-upgrade]"
+          node.save
         end
-      end
-    end
-    all_nodes.each do |n|
-      node = NodeObject.find_node_by_name n
-      if node.role? "updater-upgrade"
-        role_name = NodeObject.make_role_name(node.name)
-        storage_role = RoleObject.find_role_by_name(role_name)
-        storage_role = role
-        # TODO: Make sure that storage_role.name does not already exist
-        storage_role.name= role.name+"-upgrade_storage"
-        storage_role.save
-        node.delete_from_run_list(role.name)
-        # TODO: Find out if there can be more than one role on the run_list -
-        # If so, handle that in a proper way
-        node.add_to_run_list("updater-upgrade", 2000)
-        node.save
       end
     end
 
@@ -110,19 +98,12 @@ class UpdaterService < ServiceObject
   def apply_role_post_chef_call(old_role, role, all_nodes)
     all_nodes.each do |n|
       node = NodeObject.find_node_by_name n
-      if node.role? "updater-upgrade"
-        # Put together storage role name
-        role_name = NodeObject.make_role_name(node.name)
-        role  = RoleObject.find_role_by_name(role_name+"-upgrade_storage")
-        role.name = role_name
-        node.delete_from_run_list("updater-upgrade")
-#        priority = runlist_priority_map[item] || local_chef_order
-        priority = 1
-        # FIXME: Not sure if this works, and if it does, find solution for priority
-        node.add_to_run_list(role.name, priority)
-        node.crowbar["state"] = "upgrade"
-        # Cleanup storage role
-        RoleObject.destroy(role_name+"-upgrade_storage")
+      if node.role? "updater-crowbar-upgrade"
+        # After the upgrade recipes were executed, return the original role to runlist
+        node_role_name = NodeObject.make_role_name(node.name)
+        node.run_list.run_list_items.clear
+        node.run_list.run_list_items << "role[#{node_role_name}]"
+        node.crowbar["state"] = "crowbar-upgrade"
         node.save
       end
     end
