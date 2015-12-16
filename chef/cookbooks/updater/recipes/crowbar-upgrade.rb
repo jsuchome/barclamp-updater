@@ -1,6 +1,6 @@
 #
 # Cookbook Name:: updater
-# Recipe:: upgrade
+# Recipe:: crowbar-upgrade
 #
 # Copyright 2013-2015, SUSE LINUX Products GmbH
 #
@@ -23,35 +23,28 @@
 # collecting that information via the attributes provided by chef is
 # is rather complicated. So instead we fall back to a simple bash hack
 
-if !node[:updater].has_key?(:upgrade_one_shot_run) || !node[:updater][:upgrade_one_shot_run]
+bash "disable_openstack_services" do
+  code <<-EOF
+    for i in /etc/init.d/openstack-* /etc/init.d/openvswitch-switch /etc/init.d/ovs-usurp-config-* /etc/init.d/drbd /etc/init.d/openais;
+    do
+      if test -e $i
+      then
+        initscript=`basename $i`
+        insserv -r $initscript
+      fi
+    done
+  EOF
+  only_if { node[:platform] == "suse" }
+end
 
-  node[:updater][:upgrade_one_shot_run] = true
-  node.save
+# Disable crowbar-join
+service "crowbar_join" do
+  action :disable
+  only_if { node[:platform] == "suse" }
+end
 
-
-  bash "disable_openstack_services" do
-    code <<-EOF
-      for i in /etc/init.d/openstack-* /etc/init.d/openvswitch-switch /etc/init.d/ovs-usurp-config-* /etc/init.d/drbd /etc/init.d/openais;
-      do
-        if test -e $i
-        then
-          initscript=`basename $i`
-          insserv -r $initscript
-        fi
-      done
-    EOF
-    only_if { node[:platform] == "suse" }
-  end
-
-  # Disable crowbar-join
-  service "crowbar_join" do
-    action :disable
-    only_if { node[:platform] == "suse" }
-  end
-
-  # Disable chef-client
-  service "chef-client" do
-    action [:disable, :stop]
-    only_if { node[:platform] == "suse" }
-  end
+# Disable chef-client
+service "chef-client" do
+  action [:disable, :stop]
+  only_if { node[:platform] == "suse" }
 end
