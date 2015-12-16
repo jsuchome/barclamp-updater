@@ -23,15 +23,15 @@
       "elements": {},
       "element_states": {
         "updater": [ "readying", "ready", "applying" ],
-        "updater-upgrade": [ "readying", "ready", "applying" ]
+        "updater-crowbar-upgrade": [ "readying", "ready", "applying" ]
       },
       "element_order": [
         [ "updater" ],
-        [ "updater-upgrade" ]
+        [ "updater-crowbar-upgrade" ]
       ],
       "element_run_list_order": {
         "updater": 40,
-        "updater-upgrade": 2000
+        "updater-crowbar-upgrade": 2000
       },
       "config": {
         "environment": "updater-config-base",

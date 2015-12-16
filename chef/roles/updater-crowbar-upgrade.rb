@@ -17,9 +17,9 @@
 # limitations under the License.
 #
 
-name "updater-upgrade"
+name "updater-crowbar-upgrade"
 description "Prepare nodes for the cloud upgrade"
 
 run_list(
-  "recipe[updater::upgrade]"
+  "recipe[updater::crowbar-upgrade]"
 )

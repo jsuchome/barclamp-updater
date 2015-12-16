@@ -1,6 +1,6 @@
 #
 # Cookbook Name:: updater
-# Recipe:: upgrade
+# Recipe:: crowbar-upgrade
 #
 # Copyright 2013-2015, SUSE LINUX Products GmbH
 #
